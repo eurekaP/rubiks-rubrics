@@ -336,8 +336,60 @@
     40%,80% { transform: translateX(5px); }
   }
 
+  /* Drag handle is mobile-only; hidden on desktop. */
+  .sheet-handle { display: none; }
+
   @media (max-width: 640px) {
-    #panel { right: 12px; left: 12px; width: auto; top: auto; bottom: 12px; transform: none; padding: 16px; }
+    /* The control panel becomes a draggable / swipeable bottom sheet so the
+       cube stays visible. It defaults to a collapsed "peek" state and can be
+       dragged or tapped open to reveal the controls. */
+    #panel {
+      left: 0; right: 0; bottom: 0; top: auto; width: auto;
+      transform: translateY(0);
+      border-radius: 22px 22px 0 0;
+      padding: 0 16px calc(18px + env(safe-area-inset-bottom));
+      max-height: 62vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      transition: transform .32s cubic-bezier(.32, .72, 0, 1);
+      will-change: transform;
+    }
+    #panel.sheet-dragging { transition: none; }
+    #panel .group:first-of-type { margin-top: 6px; }
+
+    .sheet-handle {
+      display: flex; flex-direction: column; align-items: center;
+      position: sticky; top: 0; z-index: 2;
+      margin: 0 -16px 6px; padding: 9px 16px 9px;
+      background: var(--panel-bg);
+      backdrop-filter: blur(18px) saturate(140%);
+      -webkit-backdrop-filter: blur(18px) saturate(140%);
+      border-radius: 22px 22px 0 0;
+      border-bottom: 1px solid var(--panel-border);
+      cursor: grab; touch-action: none; user-select: none;
+    }
+    .sheet-handle:active { cursor: grabbing; }
+    .sheet-handle:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+    .sheet-grip {
+      width: 38px; height: 4px; border-radius: 99px;
+      background: var(--text-dim); opacity: .55;
+    }
+    .sheet-handle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%; margin-top: 8px;
+    }
+    .sheet-handle-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .9px;
+      text-transform: uppercase; color: var(--text-dim);
+    }
+    .sheet-chevron {
+      width: 18px; height: 18px; color: var(--text-dim);
+      transition: transform .32s cubic-bezier(.32, .72, 0, 1);
+    }
+    .sheet-chevron svg { display: block; width: 100%; height: 100%; fill: currentColor; }
+    #panel.sheet-expanded .sheet-chevron { transform: rotate(180deg); }
+
     #hint, #title p, #footer, #notation { display: none; }
   }
 
@@ -467,6 +519,15 @@
   </div>
 
   <div id="panel">
+    <div id="sheetHandle" class="sheet-handle" role="button" tabindex="0" aria-expanded="false" aria-controls="panel" aria-label="Show or hide controls — drag or tap">
+      <span class="sheet-grip" aria-hidden="true"></span>
+      <span class="sheet-handle-row">
+        <span class="sheet-handle-label">Controls</span>
+        <span class="sheet-chevron" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M12 8.3l-6 6L7.4 15.7 12 11.1l4.6 4.6L18 14.3z"/></svg>
+        </span>
+      </span>
+    </div>
     <!-- Speed -->
     <div class="group">
       <div class="label-row">
@@ -1090,6 +1151,125 @@
     controls.autoRotate = e.target.checked;
   });
 
+  // ---------------------------------------------------------------------------
+  // Mobile bottom sheet — draggable / swipeable control panel
+  // ---------------------------------------------------------------------------
+  // On phones the panel becomes a bottom sheet. It defaults to a collapsed
+  // "peek" so the cube is fully visible, and can be dragged, swiped or tapped
+  // open. While open, the cube is lifted into the space above the sheet so it
+  // is never hidden behind the UI.
+  const panel       = document.getElementById('panel');
+  const sheetHandle = document.getElementById('sheetHandle');
+  const mqMobile    = window.matchMedia('(max-width: 640px)');
+  const clamp       = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+  let sheetState = 'collapsed';            // 'collapsed' | 'expanded'
+  let curTranslate = 0;                    // current translateY (px)
+  let dragging = false, dragMoved = false;
+  let dragStartY = 0, dragStartTranslate = 0;
+  let lastMoveY = 0, lastMoveT = 0, velocity = 0;
+
+  const peekHeight = () => sheetHandle.offsetHeight || 56;
+  const collapsedTranslate = () => Math.max(0, panel.offsetHeight - peekHeight());
+
+  function setTranslate(px, animate) {
+    curTranslate = px;
+    panel.classList.toggle('sheet-dragging', !animate);
+    panel.style.transform = `translateY(${px}px)`;
+  }
+
+  function applySheetState(state, animate = true) {
+    sheetState = state;
+    const expanded = state === 'expanded';
+    panel.classList.toggle('sheet-expanded', expanded);
+    sheetHandle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    setTranslate(expanded ? 0 : collapsedTranslate(), animate);
+  }
+
+  sheetHandle.addEventListener('pointerdown', (e) => {
+    if (!mqMobile.matches) return;
+    dragging = true; dragMoved = false;
+    dragStartY = e.clientY;
+    dragStartTranslate = curTranslate;
+    lastMoveY = e.clientY; lastMoveT = e.timeStamp; velocity = 0;
+    try { sheetHandle.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+
+  sheetHandle.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dy = e.clientY - dragStartY;
+    if (Math.abs(dy) > 4) dragMoved = true;
+    const dt = e.timeStamp - lastMoveT;
+    if (dt > 0) velocity = (e.clientY - lastMoveY) / dt;   // px/ms (+ = downward)
+    lastMoveY = e.clientY; lastMoveT = e.timeStamp;
+    setTranslate(clamp(dragStartTranslate + dy, 0, collapsedTranslate()), false);
+  });
+
+  function endDrag(e) {
+    if (!dragging) return;
+    dragging = false;
+    try { sheetHandle.releasePointerCapture(e.pointerId); } catch (_) {}
+    if (!dragMoved) {                       // a tap toggles the sheet
+      applySheetState(sheetState === 'expanded' ? 'collapsed' : 'expanded');
+      return;
+    }
+    let next;
+    if (Math.abs(velocity) > 0.45) next = velocity < 0 ? 'expanded' : 'collapsed';
+    else next = curTranslate < collapsedTranslate() / 2 ? 'expanded' : 'collapsed';
+    applySheetState(next);
+  }
+  sheetHandle.addEventListener('pointerup', endDrag);
+  sheetHandle.addEventListener('pointercancel', endDrag);
+
+  sheetHandle.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      applySheetState(sheetState === 'expanded' ? 'collapsed' : 'expanded');
+    }
+  });
+
+  // Keep the cube visible above the sheet by lifting the camera's view.
+  let viewOffsetActive = false, lastOffsetS = -1;
+  function updateCubeViewOffset(force) {
+    const W = window.innerWidth, H = window.innerHeight;
+    let s = 0;
+    if (mqMobile.matches) {
+      const covered = Math.max(0, H - panel.getBoundingClientRect().top);
+      // Lift the cube only once the sheet covers meaningfully more than the
+      // peek, easing the lift in so it tracks the drag/animation smoothly.
+      if (covered > peekHeight() + 12) s = Math.min(covered, H * 0.42);
+    }
+    if (!force && Math.abs(s - lastOffsetS) < 0.5) return;
+    lastOffsetS = s;
+    if (s > 0) {
+      // Shift the frustum up (so the cube rises into the area above the sheet)
+      // and zoom out to keep the whole cube comfortably framed and undistorted.
+      camera.aspect = W / (H + s);
+      camera.zoom = (H - s * 0.5) / (H + s);
+      camera.setViewOffset(W, H + s, 0, s, W, H);
+      viewOffsetActive = true;
+    } else {
+      if (viewOffsetActive) { camera.clearViewOffset(); viewOffsetActive = false; }
+      camera.aspect = W / H;
+      camera.zoom = 1;
+    }
+    camera.updateProjectionMatrix();
+  }
+
+  function syncMobileSheet() {
+    if (mqMobile.matches) {
+      applySheetState(sheetState, false);
+    } else {
+      panel.classList.remove('sheet-dragging', 'sheet-expanded');
+      panel.style.transform = '';
+      curTranslate = 0;
+    }
+    updateCubeViewOffset(true);
+  }
+  if (mqMobile.addEventListener) mqMobile.addEventListener('change', syncMobileSheet);
+  else mqMobile.addListener(syncMobileSheet);
+  if (mqMobile.matches) applySheetState('collapsed', false);
+
   // ---- Light / dark theme toggle ----
   const themeRoot = document.documentElement;
   function applyTheme(theme) {
@@ -1138,11 +1318,14 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     composer.setSize(window.innerWidth, window.innerHeight);
     bloom.setSize(window.innerWidth, window.innerHeight);
+    if (mqMobile.matches) applySheetState(sheetState, false);
+    updateCubeViewOffset(true);
   });
 
   function loop() {
     requestAnimationFrame(loop);
     controls.update();
+    updateCubeViewOffset();
     composer.render();
   }
 
