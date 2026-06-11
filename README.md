@@ -1,11 +1,11 @@
 # Rubik's Rubrics
 
 A stunning, self-contained 3D Rubik's Cube visualization. A scrambled cube appears,
-then solves itself with smooth, eased layer-turn animations — and you control the show.
-
-![](rubiks-rubrics-contributions.webp)
+then solves itself with smooth, eased layer-turn animations... and you control the show.
 
 **▶ Live demo:** https://leereilly.net/rubiks-rubriks/
+
+![](screenshot.webp)
 
 ![Rubik's Rubrics](https://img.shields.io/badge/three.js-r160-000?logo=three.js) ![No build step](https://img.shields.io/badge/build-none-2ea043)
 
