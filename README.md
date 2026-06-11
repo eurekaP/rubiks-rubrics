@@ -1,6 +1,6 @@
 # Rubik's Rubrics
 
-A stunning, self-contained 3D Rubik's Cube visualization. A scrambled cube appears,
+A stunning, self-contained 3D Rubik's Cube visualizer and solver. A scrambled cube appears,
 then solves itself with smooth, eased layer-turn animations... and you control the show.
 
 **▶ Live demo:** https://leereilly.net/rubiks-rubriks/
