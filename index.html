@@ -1,10 +1,21 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <title>Rubik's Rubriks — a cube, solved with style</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2339d353'/%3E%3C/svg%3E" />
+<script>
+  // Set the theme before first paint to avoid a flash of the wrong palette.
+  (function () {
+    try {
+      var t = localStorage.getItem('rr-theme');
+      document.documentElement.setAttribute('data-theme', t === 'light' ? 'light' : 'dark');
+    } catch (e) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    }
+  })();
+</script>
 <style>
   :root {
     --accent: #2ea043;
@@ -315,6 +326,50 @@
     #panel { right: 12px; left: 12px; width: auto; top: auto; bottom: 12px; transform: none; padding: 16px; }
     #hint, #title p, #footer, #notation { display: none; }
   }
+
+  /* ---- Theme toggle (top right) ---- */
+  .theme-toggle {
+    position: fixed; top: 22px; right: 26px; z-index: 10;
+    width: 40px; height: 40px; border-radius: 11px; cursor: pointer;
+    background: var(--panel-bg); border: 1px solid var(--panel-border); color: var(--text);
+    display: inline-flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(18px) saturate(140%); -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 8px 24px rgba(0,0,0,.3);
+    transition: background .15s, color .15s, transform .08s, border-color .15s;
+  }
+  .theme-toggle:hover { color: var(--accent-bright); border-color: var(--accent); }
+  .theme-toggle:active { transform: scale(.92); }
+  .theme-toggle svg { width: 18px; height: 18px; fill: currentColor; }
+  :root[data-theme="dark"] .theme-toggle .t-sun { display: none; }
+  :root[data-theme="light"] .theme-toggle .t-moon { display: none; }
+
+  /* ---- Light theme overrides ---- */
+  :root[data-theme="light"] {
+    --panel-bg: rgba(255, 255, 255, 0.74);
+    --panel-border: rgba(0, 0, 0, 0.12);
+    --text: #1f2328;
+    --text-dim: #59636e;
+  }
+  html[data-theme="light"], html[data-theme="light"] body { background: #e9eef3; }
+  [data-theme="light"] .btn,
+  [data-theme="light"] .scramble-btn,
+  [data-theme="light"] .nt-copy,
+  [data-theme="light"] .modal-close,
+  [data-theme="light"] #customScramble { background: rgba(0,0,0,.045); }
+  [data-theme="light"] .btn:hover,
+  [data-theme="light"] .scramble-btn:hover,
+  [data-theme="light"] .nt-copy:hover,
+  [data-theme="light"] .modal-close:hover { background: rgba(0,0,0,.08); }
+  [data-theme="light"] .nt-icon,
+  [data-theme="light"] .label .help { background: rgba(0,0,0,.05); }
+  [data-theme="light"] .nt-icon:hover,
+  [data-theme="light"] .nt-icon:focus-visible { background: rgba(0,0,0,.09); }
+  [data-theme="light"] input[type="range"] { background: rgba(0,0,0,.12); }
+  [data-theme="light"] .slider-sw { background: rgba(0,0,0,.18); }
+  [data-theme="light"] code,
+  [data-theme="light"] .modal-card code { background: rgba(0,0,0,.07); }
+  [data-theme="light"] #footer a:hover { color: #1f2328; }
+  [data-theme="light"] .label .help .tip { color: #e6edf3; }
 </style>
 </head>
 <body>
@@ -325,6 +380,11 @@
     <p>A scrambled cube, solved with style.</p>
   </div>
   <div id="hint">Drag to orbit · scroll to zoom</div>
+
+  <button id="themeToggle" class="theme-toggle" aria-label="Toggle light and dark theme" title="Toggle theme">
+    <svg class="t-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.74 2.05a9 9 0 1 0 9.2 9.2A7 7 0 0 1 12.74 2.05z"/></svg>
+    <svg class="t-sun" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0-5a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0V3a1 1 0 0 1 1-1zm0 17a1 1 0 0 1 1 1v2a1 1 0 1 1-2 0v-2a1 1 0 0 1 1-1zM4.22 4.22a1 1 0 0 1 1.42 0l1.42 1.42A1 1 0 1 1 5.64 7.06L4.22 5.64a1 1 0 0 1 0-1.42zm12.72 12.72a1 1 0 0 1 1.42 0l1.42 1.42a1 1 0 0 1-1.42 1.42l-1.42-1.42a1 1 0 0 1 0-1.42zM2 12a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1zm17 0a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1zM4.22 19.78a1 1 0 0 1 0-1.42l1.42-1.42a1 1 0 1 1 1.42 1.42l-1.42 1.42a1 1 0 0 1-1.42 0zm12.72-12.72a1 1 0 0 1 0-1.42l1.42-1.42a1 1 0 1 1 1.42 1.42l-1.42 1.42a1 1 0 0 1-1.42 0z"/></svg>
+  </button>
 
   <div id="notation">
     <div class="nt-head">
@@ -382,7 +442,9 @@
 
   <div id="footer">
     <span>Made with <span class="heart">♥</span> and</span>
-    <svg viewBox="0 0 16 16" aria-label="GitHub Copilot" role="img"><title>GitHub Copilot</title><path d="M7.998 15.035c-4.562 0-7.873-2.914-7.998-3.749V9.338c.085-.628.677-1.686 1.588-2.065.013-.07.024-.143.036-.218.029-.183.06-.384.126-.612-.201-.508-.254-1.084-.254-1.656 0-.87.128-1.769.693-2.484.579-.733 1.494-1.124 2.724-1.261 1.206-.134 2.262.034 2.944.765.05.053.096.108.139.165.044-.057.094-.112.143-.165.682-.731 1.738-.899 2.944-.765 1.23.137 2.145.528 2.724 1.261.566.715.693 1.614.693 2.484 0 .572-.053 1.148-.254 1.656.066.228.098.429.126.612.012.076.024.148.037.218.924.385 1.522 1.471 1.591 2.095v1.872c0 .766-3.351 3.795-8.002 3.795Zm0-1.485c2.28 0 4.584-1.11 5.002-1.433V7.862l-.023-.116c-.49.21-1.075.291-1.727.291-1.146 0-2.059-.327-2.71-.991A3.222 3.222 0 0 1 8 6.303a3.24 3.24 0 0 1-.544.743c-.65.664-1.563.991-2.71.991-.652 0-1.236-.081-1.727-.291l-.023.116v4.255c.419.323 2.722 1.433 5.002 1.433ZM6.762 2.83c-.193-.206-.637-.413-1.682-.297-1.019.113-1.479.404-1.713.7-.247.312-.369.789-.369 1.554 0 .793.129 1.171.308 1.371.162.181.519.379 1.442.379.853 0 1.339-.235 1.638-.54.315-.322.527-.827.617-1.553.117-.935-.037-1.395-.241-1.614Zm4.155-.297c-1.044-.116-1.488.091-1.681.297-.204.219-.359.679-.242 1.614.091.726.303 1.231.618 1.553.299.305.784.54 1.638.54.922 0 1.28-.198 1.442-.379.179-.2.308-.578.308-1.371 0-.765-.123-1.242-.37-1.554-.233-.296-.693-.587-1.713-.7Z"/><path d="M6.25 9.037a.75.75 0 0 1 .75.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 .75-.75Zm4.25.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 1.5 0Z"/></svg>
+    <a href="https://github.com/features/copilot" aria-label="GitHub Copilot">
+      <svg viewBox="0 0 16 16" role="img"><title>GitHub Copilot</title><path d="M7.998 15.035c-4.562 0-7.873-2.914-7.998-3.749V9.338c.085-.628.677-1.686 1.588-2.065.013-.07.024-.143.036-.218.029-.183.06-.384.126-.612-.201-.508-.254-1.084-.254-1.656 0-.87.128-1.769.693-2.484.579-.733 1.494-1.124 2.724-1.261 1.206-.134 2.262.034 2.944.765.05.053.096.108.139.165.044-.057.094-.112.143-.165.682-.731 1.738-.899 2.944-.765 1.23.137 2.145.528 2.724 1.261.566.715.693 1.614.693 2.484 0 .572-.053 1.148-.254 1.656.066.228.098.429.126.612.012.076.024.148.037.218.924.385 1.522 1.471 1.591 2.095v1.872c0 .766-3.351 3.795-8.002 3.795Zm0-1.485c2.28 0 4.584-1.11 5.002-1.433V7.862l-.023-.116c-.49.21-1.075.291-1.727.291-1.146 0-2.059-.327-2.71-.991A3.222 3.222 0 0 1 8 6.303a3.24 3.24 0 0 1-.544.743c-.65.664-1.563.991-2.71.991-.652 0-1.236-.081-1.727-.291l-.023.116v4.255c.419.323 2.722 1.433 5.002 1.433ZM6.762 2.83c-.193-.206-.637-.413-1.682-.297-1.019.113-1.479.404-1.713.7-.247.312-.369.789-.369 1.554 0 .793.129 1.171.308 1.371.162.181.519.379 1.442.379.853 0 1.339-.235 1.638-.54.315-.322.527-.827.617-1.553.117-.935-.037-1.395-.241-1.614Zm4.155-.297c-1.044-.116-1.488.091-1.681.297-.204.219-.359.679-.242 1.614.091.726.303 1.231.618 1.553.299.305.784.54 1.638.54.922 0 1.28-.198 1.442-.379.179-.2.308-.578.308-1.371 0-.765-.123-1.242-.37-1.554-.233-.296-.693-.587-1.713-.7Z"/><path d="M6.25 9.037a.75.75 0 0 1 .75.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 .75-.75Zm4.25.75v1.501a.75.75 0 0 1-1.5 0V9.787a.75.75 0 0 1 1.5 0Z"/></svg>
+    </a>
     <span>and open source on</span>
     <a href="https://github.com/leereilly/rubiks-rubriks">
       <svg viewBox="0 0 16 16" aria-label="GitHub" role="img"><title>GitHub</title><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg>
@@ -524,7 +586,7 @@
   renderer.outputColorSpace = THREE.SRGBColorSpace;
 
   const scene = new THREE.Scene();
-  scene.background = makeGradientBackground();
+  scene.background = makeGradientBackground(document.documentElement.getAttribute('data-theme'));
 
   const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(5.2, 5.0, 7.2);
@@ -1014,17 +1076,38 @@
     controls.autoRotate = e.target.checked;
   });
 
+  // ---- Light / dark theme toggle ----
+  const themeRoot = document.documentElement;
+  function applyTheme(theme) {
+    const t = theme === 'light' ? 'light' : 'dark';
+    themeRoot.setAttribute('data-theme', t);
+    if (scene.background && scene.background.isTexture) scene.background.dispose();
+    scene.background = makeGradientBackground(t);
+  }
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = themeRoot.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    try { localStorage.setItem('rr-theme', next); } catch (e) {}
+    applyTheme(next);
+  });
+
   // ---------------------------------------------------------------------------
   // Background helper
   // ---------------------------------------------------------------------------
-  function makeGradientBackground() {
+  function makeGradientBackground(theme) {
+    const light = theme === 'light';
     const c = document.createElement('canvas');
     c.width = c.height = 512;
     const ctx = c.getContext('2d');
     const g = ctx.createRadialGradient(256, 220, 60, 256, 256, 380);
-    g.addColorStop(0, '#1a2433');
-    g.addColorStop(0.5, '#0d1320');
-    g.addColorStop(1, '#05060a');
+    if (light) {
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(0.5, '#e7ecf2');
+      g.addColorStop(1, '#cdd6e0');
+    } else {
+      g.addColorStop(0, '#1a2433');
+      g.addColorStop(0.5, '#0d1320');
+      g.addColorStop(1, '#05060a');
+    }
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, 512, 512);
     const tex = new THREE.CanvasTexture(c);
