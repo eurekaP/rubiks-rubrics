@@ -449,7 +449,19 @@
   /* ---- Webcam cube scanner ---- */
   .scan-cta { border-color: var(--accent); }
   .scan-cta svg { fill: var(--accent-bright); }
-  #scanCube { margin-bottom: 10px; }
+  #scanCube { margin-bottom: 10px; flex-direction: column; gap: 2px; }
+  .scan-cta-main { display: inline-flex; align-items: center; gap: 8px; }
+  .scan-cta-note {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
+    color: var(--accent-bright); opacity: .92;
+  }
+  .scan-tag {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase;
+    padding: 2.5px 7px; border-radius: 999px; line-height: 1; white-space: nowrap;
+    color: var(--accent-bright); background: rgba(46,160,67,.15);
+    border: 1px solid rgba(46,160,67,.45);
+  }
+  .scan-title { display: flex; align-items: center; gap: 9px; min-width: 0; }
 
   /* "Press play" toast */
   .toast {
@@ -512,7 +524,7 @@
     transition: background-color .12s linear;
   }
   .scan-overlay[data-mode="camera"] .scan-grid { pointer-events: auto; }
-  .scan-overlay[data-mode="camera"] .scan-grid .gc:not(.center) { cursor: pointer; }
+  .scan-overlay[data-mode="camera"] .scan-grid .gc { cursor: pointer; }
   .scan-grid .gc.pinned { box-shadow: inset 0 0 0 3px #fff, inset 0 0 0 5px rgba(0,0,0,.6); }
   .scan-cam-error {
     position: absolute; inset: 0; display: none; flex-direction: column; gap: 14px;
@@ -549,8 +561,10 @@
   [data-theme="light"] .scan-guide { background: rgba(255,255,255,.62); border-color: rgba(0,0,0,.14); }
   .scan-overlay[data-cam="error"] .scan-guide,
   .scan-overlay[data-cam="init"] .scan-guide { display: none; }
-  .sg-scene { width: 72px; height: 58px; perspective: 320px; display: flex; align-items: center; justify-content: center; }
-  .sg-cube { position: relative; width: 44px; height: 44px; transform-style: preserve-3d; }
+  .sg-scene { width: 76px; height: 64px; perspective: 360px; display: flex; align-items: center; justify-content: center; }
+  /* Constant isometric "camera" so a turn always reads as a solid 3D object, never edge-on/flat. */
+  .sg-view { position: relative; width: 44px; height: 44px; transform-style: preserve-3d; transform: rotateX(-24deg) rotateY(-30deg); }
+  .sg-cube { position: absolute; inset: 0; width: 44px; height: 44px; transform-style: preserve-3d; }
   .sg-face {
     position: absolute; width: 44px; height: 44px; border-radius: 5px;
     background-color: #5d6979;
@@ -568,6 +582,12 @@
   .sg-left   { transform: rotateY(-90deg) translateZ(22px); background-color: #ff7a18; }
   .sg-top    { transform: rotateX(90deg)  translateZ(22px); background-color: #f7f7f7; }
   .sg-bottom { transform: rotateX(-90deg) translateZ(22px); background-color: #ffd400; }
+  /* Faint outline cube pinned at the start orientation: the cube's "previous position".
+     Slightly enlarged so it reads as an outline around the solid and never z-fights it. */
+  .sg-ghost { transform: scale3d(1.06, 1.06, 1.06); }
+  .sg-ghost .sg-face { background-color: transparent; background-image: none; box-shadow: inset 0 0 0 1.6px rgba(255,255,255,.34); }
+  [data-theme="light"] .sg-ghost .sg-face { box-shadow: inset 0 0 0 1.6px rgba(0,0,0,.32); }
+  .scan-guide[data-gesture="present"] .sg-ghost { display: none; }
   .sg-label {
     font-size: 10px; font-weight: 700; letter-spacing: .4px; text-transform: uppercase;
     color: var(--text); text-align: center; line-height: 1.15; opacity: .92;
@@ -583,44 +603,47 @@
   .scan-guide[data-gesture="tip-fwd"]  .sg-arrow { transform: rotate(-90deg); }
   .scan-guide[data-gesture="tip-back"] .sg-arrow { transform: rotate(90deg); }
   @keyframes sg-arrow-slide { 0%, 100% { transform: translateX(4px); } 50% { transform: translateX(-4px); } }
-  .scan-guide[data-gesture="present"]  .sg-cube { animation: sg-present 4.8s ease-in-out infinite; }
-  .scan-guide[data-gesture="spin"]     .sg-cube { animation: sg-spin    3s   ease-in-out infinite; }
-  .scan-guide[data-gesture="tip-fwd"]  .sg-cube { animation: sg-tipfwd  3s   ease-in-out infinite; }
-  .scan-guide[data-gesture="tip-back"] .sg-cube { animation: sg-tipback 3s   ease-in-out infinite; }
-  /* Gentle continuous orbit so the held face always looks like a solid 3D cube. */
+  /* Only the solid cube animates; the ghost stays pinned at the start orientation
+     as a fixed outline (the cube's "previous position"), so every turn reads against
+     a stationary reference. The constant tilt on .sg-view keeps each pose looking like
+     a solid 3D cube throughout the turn, never collapsing edge-on. */
+  .scan-guide[data-gesture="present"]  .sg-solid { animation: sg-present 4.8s ease-in-out infinite; }
+  .scan-guide[data-gesture="spin"]     .sg-solid { animation: sg-spin    3.4s ease-in-out infinite; }
+  .scan-guide[data-gesture="tip-fwd"]  .sg-solid { animation: sg-tipfwd  3.4s ease-in-out infinite; }
+  .scan-guide[data-gesture="tip-back"] .sg-solid { animation: sg-tipback 3.4s ease-in-out infinite; }
+  /* Gentle idle sway so the held front face still reads as a solid 3D cube. */
   @keyframes sg-present {
-    0%   { transform: rotateX(-20deg) rotateY(-32deg); }
-    50%  { transform: rotateX(-10deg) rotateY(24deg); }
-    100% { transform: rotateX(-20deg) rotateY(-32deg); }
+    0%   { transform: rotateY(-15deg); }
+    50%  { transform: rotateY(15deg); }
+    100% { transform: rotateY(-15deg); }
   }
-  /* Quarter-turn spin; a constant tilt keeps a side face visible throughout the turn. */
+  /* A single quarter-turn from the start orientation (where the ghost sits) followed by
+     a hold on the result, so both the direction and the destination register. The loop
+     wraps instantly back to the start, so the only motion shown is the correct direction.
+     No opacity is animated here: fading the solid would force the browser to flatten its
+     preserve-3d layer and the cube would collapse edge-on mid-turn. */
   @keyframes sg-spin {
-    0%, 14%  { transform: rotateX(-16deg) rotateY(-14deg);   opacity: 1; }
-    58%, 78% { transform: rotateX(-16deg) rotateY(-104deg);  opacity: 1; }
-    88%      { transform: rotateX(-16deg) rotateY(-104deg);  opacity: 0; }
-    89%      { transform: rotateX(-16deg) rotateY(-14deg);   opacity: 0; }
-    100%     { transform: rotateX(-16deg) rotateY(-14deg);   opacity: 1; }
+    0%, 12%   { transform: rotateY(0deg); }
+    55%, 100% { transform: rotateY(-90deg); }
   }
+  /* Tip the top toward the camera (rotate forward about the horizontal axis). */
   @keyframes sg-tipfwd {
-    0%, 14%  { transform: rotateY(-16deg) rotateX(-12deg);   opacity: 1; }
-    58%, 78% { transform: rotateY(-16deg) rotateX(-102deg);  opacity: 1; }
-    88%      { transform: rotateY(-16deg) rotateX(-102deg);  opacity: 0; }
-    89%      { transform: rotateY(-16deg) rotateX(-12deg);   opacity: 0; }
-    100%     { transform: rotateY(-16deg) rotateX(-12deg);   opacity: 1; }
+    0%, 12%   { transform: rotateX(0deg); }
+    55%, 100% { transform: rotateX(-90deg); }
   }
+  /* Tip the bottom toward the camera (rotate backward about the horizontal axis). */
   @keyframes sg-tipback {
-    0%, 14%  { transform: rotateY(-16deg) rotateX(12deg);    opacity: 1; }
-    58%, 78% { transform: rotateY(-16deg) rotateX(102deg);   opacity: 1; }
-    88%      { transform: rotateY(-16deg) rotateX(102deg);   opacity: 0; }
-    89%      { transform: rotateY(-16deg) rotateX(12deg);    opacity: 0; }
-    100%     { transform: rotateY(-16deg) rotateX(12deg);    opacity: 1; }
+    0%, 12%   { transform: rotateX(0deg); }
+    55%, 100% { transform: rotateX(90deg); }
   }
   @media (prefers-reduced-motion: reduce) {
     .scan-guide .sg-cube { animation: none !important; }
-    .scan-guide[data-gesture="present"]  .sg-cube { transform: rotateX(-16deg) rotateY(-26deg); }
-    .scan-guide[data-gesture="spin"]     .sg-cube { transform: rotateX(-16deg) rotateY(-58deg); }
-    .scan-guide[data-gesture="tip-fwd"]  .sg-cube { transform: rotateY(-16deg) rotateX(-58deg); }
-    .scan-guide[data-gesture="tip-back"] .sg-cube { transform: rotateY(-16deg) rotateX(58deg); }
+    /* No motion: pair the static ghost (start) with the solid held part-way through the
+       turn, so the rotation direction still reads from the offset between the two. */
+    .scan-guide[data-gesture="present"]  .sg-solid { transform: rotateY(0deg); }
+    .scan-guide[data-gesture="spin"]     .sg-solid { transform: rotateY(-62deg); }
+    .scan-guide[data-gesture="tip-fwd"]  .sg-solid { transform: rotateX(-62deg); }
+    .scan-guide[data-gesture="tip-back"] .sg-solid { transform: rotateX(62deg); }
     .sg-arrow-i { animation: none !important; }
   }
   @media (max-width: 640px) { .scan-guide { transform: scale(.82); } }
@@ -629,13 +652,59 @@
   .scan-review { display: none; flex-direction: column; gap: 16px; align-items: center; width: 100%; padding: 8px 0 4px; }
   .scan-overlay[data-mode="review"] .scan-review { display: flex; }
   .scan-review-help { margin: 0; font-size: 12.5px; color: var(--text-dim); text-align: center; max-width: 420px; }
-  .scan-net { display: grid; grid-template-columns: repeat(12, 1fr); gap: 3px; width: min(94vw, 432px); }
+  /* Six faces laid out as an unfolded cross (U on top, L/F/R/B across the middle,
+     D on the bottom) so the whole cube can be verified at a glance. */
+  .scan-net { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; width: min(100%, 460px); }
+  .net-face {
+    display: flex; flex-direction: column; gap: 5px; padding: 7px; border-radius: 9px;
+    background: rgba(255,255,255,.05); box-shadow: inset 0 0 0 1px var(--panel-border);
+  }
+  [data-theme="light"] .net-face { background: rgba(0,0,0,.035); }
+  .net-face-label {
+    font-size: 9.5px; font-weight: 700; letter-spacing: .7px; text-transform: uppercase;
+    color: var(--text-dim); text-align: center; line-height: 1;
+  }
+  .net-face-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
   .net-cell {
     aspect-ratio: 1; border: none; border-radius: 4px; padding: 0; cursor: pointer;
     box-shadow: inset 0 0 0 1px rgba(0,0,0,.3); transition: transform .08s;
   }
-  .net-cell:not(.center):hover { transform: scale(1.1); }
-  .net-cell.center { cursor: default; box-shadow: inset 0 0 0 2px rgba(0,0,0,.55); }
+  .net-cell:hover { transform: scale(1.1); }
+  .net-cell.center { box-shadow: inset 0 0 0 2px rgba(0,0,0,.55); }
+
+  /* The net (flat, editable) and a spinning 3D cube (solid, true-to-life) sit side by
+     side on wide screens and stack on narrow ones, so the scan can be checked both ways. */
+  .scan-review-views { display: flex; flex-wrap: wrap; gap: 26px; align-items: center; justify-content: center; width: 100%; }
+  /* Spinning 3D cube. Faces reuse the .sg-cube transforms (translateZ / rotateY±90,180 /
+     rotateX±90, no rotateZ) — exactly the net-unfolding rotations, so cubejs's row-major
+     facelet index lands on each face's 3x3 grid one-to-one (see paintCube3D). */
+  .scan-cube3d {
+    --cs: 96px;
+    flex: 0 0 auto; width: 172px; height: 172px;
+    display: flex; align-items: center; justify-content: center;
+    perspective: 680px; perspective-origin: 50% 44%;
+  }
+  .rc-view { position: relative; width: var(--cs); height: var(--cs); transform-style: preserve-3d; transform: rotateX(-22deg); }
+  .rc-cube { position: absolute; inset: 0; transform-style: preserve-3d; animation: rc-spin 15s linear infinite; }
+  .scan-cube3d:hover .rc-cube { animation-play-state: paused; }
+  .rc-face {
+    position: absolute; width: var(--cs); height: var(--cs); border-radius: 8px;
+    display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr);
+    gap: 3px; padding: 3px; background: #0d1117;
+    box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.7);
+    backface-visibility: hidden;
+  }
+  .rc-sticker { border-radius: 4px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.32), inset 0 1px 2px rgba(255,255,255,.16); backface-visibility: hidden; }
+  .rc-front  { transform: translateZ(calc(var(--cs) / 2)); }
+  .rc-back   { transform: rotateY(180deg) translateZ(calc(var(--cs) / 2)); }
+  .rc-right  { transform: rotateY(90deg)  translateZ(calc(var(--cs) / 2)); }
+  .rc-left   { transform: rotateY(-90deg) translateZ(calc(var(--cs) / 2)); }
+  .rc-up     { transform: rotateX(90deg)  translateZ(calc(var(--cs) / 2)); }
+  .rc-down   { transform: rotateX(-90deg) translateZ(calc(var(--cs) / 2)); }
+  @keyframes rc-spin { from { transform: rotateY(0deg); } to { transform: rotateY(360deg); } }
+  /* No motion: hold a static 3/4 view so it still reads as a solid 3D cube. */
+  @media (prefers-reduced-motion: reduce) { .rc-cube { animation: none; transform: rotateY(-34deg); } }
+  @media (max-width: 640px) { .scan-cube3d { --cs: 82px; width: 150px; height: 150px; } }
 
   .scan-foot { flex: 0 0 auto; padding: 14px 20px calc(20px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 11px; align-items: center; }
   .scan-steps { display: flex; gap: 7px; flex-wrap: wrap; justify-content: center; }
@@ -673,6 +742,10 @@
   .scan-btn.primary:hover { background: var(--accent-bright); }
   .scan-btn:disabled { opacity: .4; cursor: not-allowed; }
   .scan-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  /* Secondary "try a random cube" shortcut — only offered on the calibrate entry screen. */
+  .scan-test { margin-top: 2px; font-weight: 500; color: var(--text-dim); border-style: dashed; }
+  .scan-test:hover { color: var(--text); }
+  .scan-overlay:not([data-mode="calibrate"]) .scan-test { display: none; }
 </style>
 </head>
 <body>
@@ -737,8 +810,8 @@
         <tr><td>Wide</td><td><code>r u f l d b</code><br>or <code>Rw Uw</code>&hellip;</td><td>The face plus its adjacent slice</td></tr>
         <tr><td>Rotations</td><td><code>x</code> <code>y</code> <code>z</code></td><td>The whole cube (x like R, y like U, z like F)</td></tr>
       </table>
-      <p>Because every quarter turn has an inverse (<code>R</code> undoes <code>R'</code>), a <b>Scramble</b> applied to a solved cube can always be undone: the <b>Solution</b> is that same sequence reversed with each move inverted.</p>
-      <p class="sub">Tip: paste any algorithm into the Custom scramble box to replay it. Half turns are animated as two quarter turns.</p>
+      <p>A random <b>Scramble</b> is handed to a real two-phase solver (Herbert Kociemba&rsquo;s algorithm), so the <b>Solution</b> you watch is a genuine, near-optimal solve &mdash; not the scramble played in reverse.</p>
+      <p class="sub">Tip: paste any algorithm into the Custom scramble box to watch it rewind move-by-move. Half turns are animated as two quarter turns.</p>
       <p class="src">Authoritative reference: <a href="https://www.worldcubeassociation.org/regulations/#article-12-notation" target="_blank" rel="noopener noreferrer">WCA Regulations, Article 12: Notation &nearr;</a></p>
     </div>
   </div>
@@ -837,8 +910,11 @@
     </div>
 
     <button class="scramble-btn scan-cta" id="scanCube">
-      <svg viewBox="0 0 24 24"><path d="M9.4 4 8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.4-2H9.4zM12 8.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>
-      Scan a real cube
+      <span class="scan-cta-main">
+        <svg viewBox="0 0 24 24"><path d="M9.4 4 8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.4-2H9.4zM12 8.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>
+        Scan a real cube
+      </span>
+      <span class="scan-cta-note">Experimental · work in progress</span>
     </button>
 
     <button class="scramble-btn" id="scramble">
@@ -850,7 +926,10 @@
   <!-- Webcam cube scanner -->
   <div id="scanModal" class="scan-overlay" hidden data-mode="camera" data-cam="init" role="dialog" aria-modal="true" aria-label="Scan a cube with your webcam">
     <div class="scan-bar">
-      <h2 id="scanHeading">Scan your cube</h2>
+      <div class="scan-title">
+        <h2 id="scanHeading">Scan your cube</h2>
+        <span class="scan-tag">Experimental</span>
+      </div>
       <button class="scan-close" id="scanClose" aria-label="Close scanner">&times;</button>
     </div>
     <div class="scan-body">
@@ -859,13 +938,23 @@
         <div class="scan-grid" id="scanGrid" aria-hidden="true"></div>
         <div class="scan-guide" id="scanGuide" data-gesture="present" aria-hidden="true">
           <div class="sg-scene">
-            <div class="sg-cube">
-              <div class="sg-face sg-front"></div>
-              <div class="sg-face sg-back"></div>
-              <div class="sg-face sg-right"></div>
-              <div class="sg-face sg-left"></div>
-              <div class="sg-face sg-top"></div>
-              <div class="sg-face sg-bottom"></div>
+            <div class="sg-view">
+              <div class="sg-cube sg-ghost">
+                <div class="sg-face sg-front"></div>
+                <div class="sg-face sg-back"></div>
+                <div class="sg-face sg-right"></div>
+                <div class="sg-face sg-left"></div>
+                <div class="sg-face sg-top"></div>
+                <div class="sg-face sg-bottom"></div>
+              </div>
+              <div class="sg-cube sg-solid">
+                <div class="sg-face sg-front"></div>
+                <div class="sg-face sg-back"></div>
+                <div class="sg-face sg-right"></div>
+                <div class="sg-face sg-left"></div>
+                <div class="sg-face sg-top"></div>
+                <div class="sg-face sg-bottom"></div>
+              </div>
             </div>
           </div>
           <div class="sg-arrow"><span class="sg-arrow-i"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span></div>
@@ -878,8 +967,11 @@
         </div>
       </div>
       <div class="scan-review" id="scanReview">
-        <p class="scan-review-help">Tap a sticker to cycle its color until the net matches your cube. Centers are fixed.</p>
-        <div class="scan-net" id="scanNet"></div>
+        <p class="scan-review-help">Your cube, in 3D and unfolded. Spin the cube (hover to pause) to compare it with the real one, then tap any sticker — centers included — to cycle its color until they match.</p>
+        <div class="scan-review-views">
+          <div class="scan-cube3d" id="scanCube3d" aria-hidden="true"></div>
+          <div class="scan-net" id="scanNet"></div>
+        </div>
       </div>
     </div>
     <div class="scan-foot">
@@ -899,6 +991,7 @@
         <button class="scan-btn" id="scanRestart">Rescan</button>
         <button class="scan-btn primary" id="scanSolve">Solve it</button>
       </div>
+      <button class="scan-btn scan-test" id="scanTest" title="Generate a random, valid cube and watch it solve — no physical cube needed">&#127922; No cube handy? Solve a random one</button>
     </div>
   </div>
 
@@ -1177,6 +1270,7 @@
   let solveMoves = [];    // moves that take scrambled → solved
   let currentIndex = 0;   // # of solve moves applied (0 = scrambled, N = solved)
   let activeSolve = -1;   // solve move currently being typed/animated (-1 = none)
+  let scrambleToken = 0;  // bumped per New scramble; lets a late solver reply detect it's stale
 
   function randomScramble(len = 25) {
     const faces = [['x', 1], ['x', -1], ['y', 1], ['y', -1], ['z', 1], ['z', -1]];
@@ -1192,14 +1286,18 @@
     return seq;
   }
 
-  function setScramble(moves, label) {
+  function setScramble(moves, label, solveOverride) {
     stopPlaying();
     abortAnimation();
     resetToSolved();
     scramble = moves;
     scrambleLabel = label != null ? label : moves.map(moveToNotation).join(' ');
     for (const m of scramble) applyMoveInstant(m);
-    solveMoves = scramble.slice().reverse().map(inverse);
+    // Default solve = the scramble rewound; callers (the New scramble button) can pass
+    // a real solver's solution so a solve isn't merely the scramble played backwards.
+    solveMoves = (solveOverride && solveOverride.length)
+      ? solveOverride
+      : scramble.slice().reverse().map(inverse);
     currentIndex = 0;
     activeSolve = -1;
     renderFromModel();
@@ -1207,8 +1305,37 @@
     updateUI();
   }
 
+  // Build an algorithm string cube.js's parser accepts (ASCII apostrophe, not \u2032).
+  function movesToAlg(moves) {
+    return moves.map(m => moveToNotation(m).replace('\u2032', "'")).join(' ');
+  }
+
+  // Swap the reverse-replay fallback for cube.js's real two-phase (Kociemba) solution,
+  // so watching a random scramble solve runs the actual algorithm instead of rewinding
+  // the scramble. Stays silent on the fallback when the solver can't run (e.g. offline),
+  // or if the scramble/playhead moved on while we waited for the worker.
+  async function upgradeSolveWithSolver(moves, token) {
+    ensureSolver();
+    try {
+      const solution = await solveScramble(movesToAlg(moves));
+      if (token !== scrambleToken || scramble !== moves || currentIndex !== 0 || animating) return false;
+      const parsed = parseScramble(solution.trim());
+      if (!parsed.moves.length) return false;
+      solveMoves = parsed.moves;
+      updateUI();
+      return true;
+    } catch (_) {
+      return false;   // keep the reverse-replay fallback already in solveMoves
+    }
+  }
+
+  // Scramble with random face turns, shown instantly; the genuine solver solution
+  // streams in a beat later. Resolves once that's in (or the fallback is kept).
   function newScramble() {
-    setScramble(randomScramble(25));
+    const moves = randomScramble(25);
+    const token = ++scrambleToken;
+    setScramble(moves);
+    return upgradeSolveWithSolver(moves, token);
   }
 
   // ---------------------------------------------------------------------------
@@ -1696,7 +1823,23 @@
         self.postMessage({ type: 'ready' });
         self.onmessage = function (e) {
           var d = e.data;
-          if (!d || d.type !== 'solve') return;
+          if (!d) return;
+          if (d.type === 'random') {
+            // Cube.random() builds a uniformly random *valid* state — permutation
+            // and orientation parity are enforced — so it always solves. Reuse the
+            // 'solved' reply so it flows through the same job plumbing as a scan.
+            try { self.postMessage({ type: 'solved', id: d.id, solution: Cube.random().solve() }); }
+            catch (err) { self.postMessage({ type: 'solveError', id: d.id, error: String((err && err.message) || err) }); }
+            return;
+          }
+          if (d.type === 'scramble') {
+            // Apply a face-turn scramble to a solved cube and return cube.js's
+            // two-phase (Kociemba) solution: a real solve, not the scramble reversed.
+            try { var sc = new Cube(); sc.move(d.alg); self.postMessage({ type: 'solved', id: d.id, solution: sc.solve() }); }
+            catch (err) { self.postMessage({ type: 'solveError', id: d.id, error: String((err && err.message) || err) }); }
+            return;
+          }
+          if (d.type !== 'solve') return;
           try {
             var cube = Cube.fromString(d.facelets);
             var reason = unsolvableReason(cube);
@@ -1756,19 +1899,37 @@
     solveJobs.clear();
   }
 
-  function solveFacelets(facelets) {
+  // Shared queue + watchdog plumbing for any worker request that resolves with a
+  // solution string. makeMessage(id) builds the payload posted to the worker:
+  // a facelet solve from the scanner, or a random test cube.
+  function enqueueSolveJob(makeMessage) {
     return new Promise((resolve, reject) => {
       if (solverState === 'error') { reject(new Error('Solver unavailable')); return; }
       const id = ++solveSeq;
       const timer = setTimeout(() => { if (solveJobs.has(id)) resetSolver('timeout'); }, SOLVE_TIMEOUT_MS);
       solveJobs.set(id, { resolve, reject, timer });
       const send = () => {
-        if (solverWorker) solverWorker.postMessage({ type: 'solve', id, facelets });
+        if (solverWorker) solverWorker.postMessage(makeMessage(id));
         else { clearTimeout(timer); solveJobs.delete(id); reject(new Error('Solver unavailable')); }
       };
       if (solverState === 'ready') send();
       else solverReadyWaiters.push(send);
     });
+  }
+
+  function solveFacelets(facelets) {
+    return enqueueSolveJob(id => ({ type: 'solve', id, facelets }));
+  }
+
+  // Generate (and solve) a uniformly random, always-valid cube in the worker.
+  function solveRandom() {
+    return enqueueSolveJob(id => ({ type: 'random', id }));
+  }
+
+  // Apply a random face-turn scramble in the worker and get its real solution, so the
+  // "New scramble" button can solve with the algorithm instead of rewinding the scramble.
+  function solveScramble(alg) {
+    return enqueueSolveJob(id => ({ type: 'scramble', id, alg }));
   }
 
   // ---- Scanner constants ----
@@ -1823,6 +1984,7 @@
   const scanInstruction = document.getElementById('scanInstruction');
   const scanMsg = document.getElementById('scanMsg');
   const scanNet = document.getElementById('scanNet');
+  const scanCube3d = document.getElementById('scanCube3d');
   const scanHeading = document.getElementById('scanHeading');
   const scanCapture = document.getElementById('scanCapture');
   const scanBackBtn = document.getElementById('scanBack');
@@ -1831,13 +1993,15 @@
   const scanCalibCapture = document.getElementById('scanCalibCapture');
   const scanCalibBack = document.getElementById('scanCalibBack');
   const scanCalibSkip = document.getElementById('scanCalibSkip');
+  const scanTestBtn = document.getElementById('scanTest');
+  const SCAN_TEST_LABEL = scanTestBtn.textContent;
   const scanCamErrorMsg = document.getElementById('scanCamErrorMsg');
   const toastEl = document.getElementById('toast');
 
   for (let i = 0; i < 9; i++) {
     const d = document.createElement('div');
     d.className = i === 4 ? 'gc center' : 'gc';
-    if (i !== 4) d.addEventListener('click', () => onLiveCellTap(i));   // center defines the face
+    d.addEventListener('click', () => onLiveCellTap(i));   // any cell, the center included, can be re-tinted
     scanGrid.appendChild(d);
   }
 
@@ -2138,35 +2302,78 @@
     renderCalibSteps();
   }
 
+  // Lay the six faces out as a labelled, unfolded cross (U top, L/F/R/B across the
+  // middle, D bottom) so the whole cube reads at a glance. Every sticker cycles colors
+  // on tap; centers are marked with a ring but stay editable so a misread one can be fixed.
+  function cycleNetCell(f, i, cell, isCenter) {
+    const next = SCAN_ORDER[(SCAN_ORDER.indexOf(netLetters[f][i]) + 1) % SCAN_ORDER.length];
+    netLetters[f][i] = next;
+    cell.style.background = FACE_COLOR[next];
+    cell.title = FACE_NAME[next] + (isCenter ? ' (center)' : '');
+    if (cube3dCells[f]) cube3dCells[f][i].style.background = FACE_COLOR[next];
+    validateNet();
+  }
   function renderNet() {
     scanNet.innerHTML = '';
     for (const f of ['U', 'L', 'F', 'R', 'B', 'D']) {
       const [fr, fc] = NET_POS[f];
+      const panel = document.createElement('div');
+      panel.className = 'net-face';
+      panel.style.gridRow = fr + 1;
+      panel.style.gridColumn = fc + 1;
+      const label = document.createElement('span');
+      label.className = 'net-face-label';
+      label.textContent = FACE_NAME[f];
+      panel.appendChild(label);
+      const grid = document.createElement('div');
+      grid.className = 'net-face-grid';
       for (let i = 0; i < 9; i++) {
-        const r = (i / 3) | 0, c = i % 3;
+        const isCenter = i === 4;
         const cell = document.createElement('button');
         cell.type = 'button';
-        const isCenter = i === 4;
         cell.className = 'net-cell' + (isCenter ? ' center' : '');
-        cell.style.gridColumn = fc * 3 + c + 1;
-        cell.style.gridRow = fr * 3 + r + 1;
-        const letter = netLetters[f][i];
-        cell.style.background = FACE_COLOR[letter];
-        cell.title = FACE_NAME[letter] + (isCenter ? ' (center)' : '');
-        if (isCenter) {
-          cell.disabled = true;
-        } else {
-          cell.addEventListener('click', () => {
-            const next = SCAN_ORDER[(SCAN_ORDER.indexOf(netLetters[f][i]) + 1) % SCAN_ORDER.length];
-            netLetters[f][i] = next;
-            cell.style.background = FACE_COLOR[next];
-            cell.title = FACE_NAME[next];
-            validateNet();
-          });
-        }
-        scanNet.appendChild(cell);
+        cell.style.background = FACE_COLOR[netLetters[f][i]];
+        cell.title = FACE_NAME[netLetters[f][i]] + (isCenter ? ' (center)' : '');
+        cell.addEventListener('click', () => cycleNetCell(f, i, cell, isCenter));
+        grid.appendChild(cell);
       }
+      panel.appendChild(grid);
+      scanNet.appendChild(panel);
     }
+  }
+
+  // Spinning 3D cube built once, painted from netLetters. Its faces use the .sg-cube
+  // transforms (pure net-unfolding rotations), so cubejs's row-major facelet index i
+  // maps onto grid cell i for every face — no per-face remapping needed.
+  const RC_FACE_CLASS = { U: 'rc-up', R: 'rc-right', F: 'rc-front', D: 'rc-down', L: 'rc-left', B: 'rc-back' };
+  const cube3dCells = {};
+  function buildCube3D() {
+    if (scanCube3d.dataset.built) return;
+    const view = document.createElement('div'); view.className = 'rc-view';
+    const cube = document.createElement('div'); cube.className = 'rc-cube';
+    for (const f of SCAN_ORDER) {
+      const face = document.createElement('div');
+      face.className = 'rc-face ' + RC_FACE_CLASS[f];
+      const cells = [];
+      for (let i = 0; i < 9; i++) {
+        const s = document.createElement('div');
+        s.className = 'rc-sticker';
+        face.appendChild(s);
+        cells.push(s);
+      }
+      cube3dCells[f] = cells;
+      cube.appendChild(face);
+    }
+    view.appendChild(cube);
+    scanCube3d.appendChild(view);
+    scanCube3d.dataset.built = '1';
+  }
+
+  function paintCube3D() {
+    buildCube3D();
+    for (const f of SCAN_ORDER)
+      for (let i = 0; i < 9; i++)
+        cube3dCells[f][i].style.background = FACE_COLOR[netLetters[f][i]];
   }
 
   function buildFaceletString() {
@@ -2195,6 +2402,7 @@
     scanHeading.textContent = 'Check the scan';
     scanSolveBtn.textContent = 'Solve it';
     renderNet();
+    paintCube3D();
     validateNet();
   }
 
@@ -2308,7 +2516,29 @@
     }
   }
 
-  function applyScannedSolution(solution) {
+  // Demo shortcut: skip the camera entirely and solve a uniformly random, valid
+  // cube. Reuses the scanner's solve→apply pipeline so it animates just like a scan.
+  async function onRandomTest() {
+    const original = scanTestBtn.textContent;
+    scanTestBtn.disabled = true;
+    scanTestBtn.textContent = 'Building a random cube…';
+    setScanMsg('Generating a random solvable cube…', null);
+    ensureSolver();
+    try {
+      const solution = await solveRandom();
+      applyScannedSolution(solution, 'Random cube ready! Press <b>\u25B6 Play</b> to watch it solve.');
+    } catch (err) {
+      scanTestBtn.disabled = false;
+      scanTestBtn.textContent = original;
+      const reason = (err && err.message) || '';
+      const msg = (reason === 'Solver unavailable' || reason === 'Solver failed to load')
+        ? 'Couldn\u2019t load the solver. Check your connection, then try again.'
+        : 'Couldn\u2019t build a random cube. Check your connection, then try again.';
+      setScanMsg(msg, 'err');
+    }
+  }
+
+  function applyScannedSolution(solution, toastMsg) {
     closeScanner();
     // The solution takes scanned -> solved; its inverse takes solved -> scanned.
     // Feeding that inverse to setScramble reconstructs the scanned state on screen and
@@ -2316,7 +2546,7 @@
     const parsed = parseScramble(solution.trim());
     const scrambleMoves = parsed.moves.slice().reverse().map(inverse);
     setScramble(scrambleMoves);
-    showToast('Cube scanned! Press <b>\u25B6 Play</b> to watch it solve.');
+    showToast(toastMsg || 'Cube scanned! Press <b>\u25B6 Play</b> to watch it solve.');
     nudgePlay();
   }
 
@@ -2383,6 +2613,8 @@
     for (const f of CALIB_ORDER) delete calibData[f];
     scanCapture.disabled = true;
     scanCalibCapture.disabled = true;
+    scanTestBtn.disabled = false;
+    scanTestBtn.textContent = SCAN_TEST_LABEL;
     updateCalibStep();
     layoutGuide();
     ensureSolver();   // warm up the solver while the user calibrates + scans
@@ -2405,6 +2637,7 @@
   scanCalibSkip.addEventListener('click', skipCalibration);
   document.getElementById('scanRestart').addEventListener('click', backToCamera);
   scanSolveBtn.addEventListener('click', onSolve);
+  scanTestBtn.addEventListener('click', onRandomTest);
   document.getElementById('scanCamRetry').addEventListener('click', startCamera);
   window.addEventListener('resize', () => { if (!scanModal.hidden) layoutGuide(); });
 
@@ -2433,11 +2666,16 @@
   // ---------------------------------------------------------------------------
   buildCube();
   applySpeed();
-  newScramble();
+  const firstScramble = newScramble();
   loop();
 
-  // Auto-start the solve shortly after load for a stunning first impression.
-  setTimeout(() => { if (!playing && currentIndex === 0) play(); }, 1600);
+  // Auto-start the solve shortly after load for a stunning first impression. Wait for
+  // the real (algorithmic) solution so the debut isn't the scramble played backwards,
+  // but keep a beat to admire the scramble and a cap so we still play offline.
+  Promise.all([
+    new Promise(res => setTimeout(res, 1400)),
+    Promise.race([firstScramble, new Promise(res => setTimeout(res, 2600))]),
+  ]).then(() => { if (!playing && currentIndex === 0) play(); });
   </script>
 </body>
 </html>
