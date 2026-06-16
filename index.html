@@ -2029,6 +2029,25 @@
   const SCAN_ORDER = ['U', 'R', 'F', 'D', 'L', 'B'];     // cubejs facelet-string order
   const SOLVED_FACELETS = SCAN_ORDER.map(f => f.repeat(9)).join('');
   const CAPTURE_ORDER = ['F', 'R', 'B', 'L', 'U', 'D'];  // the order we ask the user to show
+  // sampleCurrentFace reads each face row-major (top-left first) from the *selfie-mirrored*
+  // preview: the displayed video and the capture canvas both apply scaleX(-1) so taps and live
+  // tints line up with what you see on screen. That mirror flips the sampled grid left-to-right
+  // versus the canonical net (which is read looking at a face from outside), so every sampled
+  // cell must be un-mirrored before it is written into the net. Every face is presented
+  // *upright* to the camera: the front and three sides by turning the cube sideways with the
+  // same face on top, and Up/Down by tipping the cube straight forward/back from that same
+  // front-facing pose (exactly what the guide cube animates). An upright face needs no rotation,
+  // so undoing the mirror is a plain column flip for all six faces. (Center index 4 maps to 4,
+  // so normalizeFacelets / scanOrientationPerm, which read only the center, are unaffected.)
+  // SCAN_REMAP[face][sampleIndex] = canonical facelet index for that face.
+  const SCAN_REMAP = {
+    F: [2, 1, 0, 5, 4, 3, 8, 7, 6],
+    R: [2, 1, 0, 5, 4, 3, 8, 7, 6],
+    B: [2, 1, 0, 5, 4, 3, 8, 7, 6],
+    L: [2, 1, 0, 5, 4, 3, 8, 7, 6],
+    U: [2, 1, 0, 5, 4, 3, 8, 7, 6],
+    D: [2, 1, 0, 5, 4, 3, 8, 7, 6],
+  };
   const NET_POS = { U: [0, 1], L: [1, 0], F: [1, 1], R: [1, 2], B: [1, 3], D: [2, 1] };
   const FACE_NAME = { U: 'Up', R: 'Right', F: 'Front', D: 'Down', L: 'Left', B: 'Back' };
   const FACE_INSTR = {
@@ -2253,7 +2272,7 @@
     const centers = SCAN_ORDER.map(f => ({ f, ...chromaAB(centerHsv(f)) }));
     const cells = [];
     for (const f of SCAN_ORDER) {
-      scanData[f].forEach((px, i) => cells.push({ f, i, ...chromaAB(rgb2hsv(px.r, px.g, px.b)) }));
+      scanData[f].forEach((px, i) => cells.push({ f, i: SCAN_REMAP[f][i], ...chromaAB(rgb2hsv(px.r, px.g, px.b)) }));
     }
     const pairs = [];
     cells.forEach((cell, ci) => {
@@ -2578,7 +2597,7 @@
     for (const f of CAPTURE_ORDER) {
       const ov = scanOverride[f];
       if (!ov) continue;
-      for (let i = 0; i < 9; i++) if (ov[i]) netLetters[f][i] = ov[i];
+      for (let i = 0; i < 9; i++) if (ov[i]) netLetters[f][SCAN_REMAP[f][i]] = ov[i];
     }
   }
 
