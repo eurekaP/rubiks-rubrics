@@ -295,8 +295,9 @@
     display: inline-flex; align-items: center; justify-content: center;
     width: 15px; height: 15px; margin-left: 6px; border-radius: 50%;
     background: rgba(255,255,255,.08); border: 1px solid var(--panel-border);
-    font-size: 10px; font-weight: 700; color: var(--text-dim); cursor: help;
+    font-size: 10px; font-weight: 700; color: var(--text-dim); cursor: pointer;
     position: relative; vertical-align: middle;
+    appearance: none; -webkit-appearance: none; padding: 0; line-height: 1;
   }
   .label .help:hover, .label .help:focus-visible { color: var(--text); outline: none; }
   .label .help .tip {
@@ -338,6 +339,13 @@
   .cs-msg { min-height: 15px; margin-top: 7px; font-size: 11px; line-height: 1.4; }
   .cs-msg.ok  { color: var(--accent-bright); }
   .cs-msg.err { color: #ff7b72; }
+  .cs-note { margin-top: 6px; font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+  .cs-note-link {
+    background: none; border: none; padding: 0; color: var(--accent-bright);
+    font-size: 11px; cursor: pointer; text-decoration: underline;
+    text-underline-offset: 2px; font-family: inherit;
+  }
+  .cs-note-link:hover { opacity: .8; }
   .cs-shake { animation: cs-shake .35s; }
   @keyframes cs-shake {
     0%,100% { transform: translateX(0); }
@@ -954,13 +962,14 @@
     <!-- Custom scramble -->
     <div class="group" style="margin-bottom:14px;">
       <div class="label-row">
-        <span class="label">Custom scramble<span class="help" tabindex="0" aria-label="Notation help" role="img">?<span class="tip">Enter face turns <code>R L U D F B</code>, slices <code>M E S</code>, wide turns <code>r u f</code> (or <code>Rw</code>), or rotations <code>x y z</code>. Add <code>'</code> for counter-clockwise or <code>2</code> for a half turn, e.g. <code>R U R' U2 f x'</code>.</span></span></span>
+        <span class="label">Custom scramble<button class="help" id="csHelp" aria-label="Open notation guide" aria-haspopup="dialog" title="Open notation guide">?<span class="tip">Enter face turns <code>R L U D F B</code>, slices <code>M E S</code>, wide turns <code>r u f</code> (or <code>Rw</code>), or rotations <code>x y z</code>. Add <code>'</code> for counter-clockwise or <code>2</code> for a half turn, e.g. <code>R U R' U2 f x'</code>.</span></button></span>
       </div>
       <div class="cs-input">
         <input type="text" id="customScramble" placeholder="e.g. R U R' U2 F" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Custom scramble notation" />
         <button class="cs-apply" id="applyScramble">Apply</button>
       </div>
       <div class="cs-msg" id="customMsg" aria-live="polite"></div>
+      <div class="cs-note">Uses <button class="cs-note-link" id="csNoteLink" aria-label="Open Singmaster notation guide" aria-haspopup="dialog">Singmaster notation</button> — hover ? for a quick reference</div>
     </div>
 
     <button class="scramble-btn scan-cta" id="scanCube">
@@ -1670,6 +1679,8 @@
   const openFmt  = () => { fmtModal.hidden = false; };
   const closeFmt = () => { fmtModal.hidden = true; };
   document.getElementById('ntHelp').addEventListener('click', openFmt);
+  document.getElementById('csHelp').addEventListener('click', openFmt);
+  document.getElementById('csNoteLink').addEventListener('click', openFmt);
   document.getElementById('fmtClose').addEventListener('click', closeFmt);
   fmtModal.addEventListener('click', (e) => { if (e.target === fmtModal) closeFmt(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !fmtModal.hidden) closeFmt(); });
